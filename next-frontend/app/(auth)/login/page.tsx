@@ -1,7 +1,8 @@
-import { AuthFooter } from "@/components/auth/auth-footer"
-import { BrandLogo } from "@/components/auth/brand-logo"
-import { LoginForm } from "@/components/auth/login-form"
-import { Card } from "@/components/ui/card"
+import { AuthFooter } from "@/components/auth/auth-footer";
+import { BrandLogo } from "@/components/auth/brand-logo";
+import { Suspense } from "react";
+import { LoginForm } from "@/components/auth/login-form";
+import { Card } from "@/components/ui/card";
 
 export default function LoginPage() {
   return (
@@ -11,7 +12,9 @@ export default function LoginPage() {
 
         <h1 className="text-h1 text-foreground text-center">Sign in</h1>
 
-        <LoginForm className="w-full" />
+        <Suspense fallback={<div className="w-full h-[200px]" />}>
+          <LoginForm className="w-full" />
+        </Suspense>
 
         <AuthFooter
           question="Don't have an account?"
@@ -20,5 +23,5 @@ export default function LoginPage() {
         />
       </Card>
     </main>
-  )
+  );
 }

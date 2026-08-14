@@ -9,7 +9,7 @@
 - **Observations:**
   - Installed `zod@^4.4.3` and `@t3-oss/env-nextjs@^0.13.11` (npm resolved minor/patch within the `^4.0.0` / `^0.13.0` ranges declared in the plan).
   - Type-check (`npx tsc --noEmit`) passed clean.
-  - `.env.example` documents `API_URL` with Docker (`nestjs-api:3000`) and host (`localhost:3000`) variants; `NODE_ENV` is documented but left commented since Next.js sets it automatically per command.
+  - `.env.example` documents `API_URL` with Docker (`nestjs-api:3000`) and host (`http://host.docker.internal:3002`) variants; `NODE_ENV` is documented but left commented since Next.js sets it automatically per command.
 
 ### SI-2 — Atualizar next-frontend/CLAUDE.md para BFF estrito
 - **Status:** completed

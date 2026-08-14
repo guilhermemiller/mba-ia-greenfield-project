@@ -32,14 +32,14 @@ docker compose exec nestjs-api npm run start:dev
 ```
 
 Services:
-- `nestjs-api` — NestJS API, port `3000`
+- `nestjs-api` — NestJS API, host port `3002` (container port `3000`)
 - `db` — PostgreSQL 17, port `5432`, database `streamtube`, user/password `streamtube`
 
 All verification and teardown commands run on the **host machine**:
 
 ```bash
 # Verify NestJS is running (expect 200 + "Hello World!")
-curl http://localhost:3000
+curl http://localhost:3002
 
 # Verify PostgreSQL is ready (runs inside the db container)
 docker compose exec db pg_isready -U streamtube
@@ -79,7 +79,7 @@ npm run format                           # Prettier formatting
 docker compose ps
 docker compose logs nestjs-api
 docker compose exec db pg_isready -U streamtube
-curl http://localhost:3000
+curl http://localhost:3002
 ```
 
 ### Test execution

@@ -68,6 +68,7 @@ function SignupForm({ className, ...props }: React.ComponentProps<"form">) {
   )
   const [created, setCreated] = React.useState(false)
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const passwordValue = watch("password")
 
   async function onSubmit(values: SignupValues) {

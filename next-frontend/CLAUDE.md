@@ -40,7 +40,7 @@ docker compose exec next-frontend npm run dev
 ```
 
 Service:
-- `next-frontend` — Next.js dev container, host port `3001` → container port `3000`. Browser accesses the app at **`http://localhost:3001`**.
+- `next-frontend` — Next.js dev container, host port `3001` → container port `3001`. Browser accesses the app at **`http://localhost:3001`**.
 
 Bind mount: the repo's `next-frontend/` directory is mounted at `/home/node/app` inside the container, so file edits on the host are reflected immediately.
 
@@ -134,7 +134,7 @@ Source of decisions: `docs/decisions/technical-decisions-next-frontend-openapi-t
 - `lib/env.ts` is the **source of truth** for environment variable reads in `next-frontend/`.
 - See `.env.example` for the canonical key set and `lib/env.ts` for the `createEnv({ server, client, shared, ... })` schema.
 
-The concrete value of `API_URL` depends on Docker Compose topology (e.g., `http://nestjs-api:3000` on a shared Compose network vs `http://host.docker.internal:3000` from a separate stack). The stacks are currently separate — networking integration is deferred to its own infra task; in the meantime, `.env.local` carries whichever value the local environment can reach.
+The concrete value of `API_URL` depends on Docker Compose topology (e.g., `http://nestjs-api:3000` on a shared Compose network vs `http://host.docker.internal:3002` from a separate stack). The stacks are currently separate — networking integration is deferred to its own infra task; in the meantime, `.env.local` carries whichever value the local environment can reach.
 
 Media streaming will eventually come from Object Storage (S3/MinIO) — TBD.
 

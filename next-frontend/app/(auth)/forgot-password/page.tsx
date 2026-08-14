@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { AuthFooter } from "@/components/auth/auth-footer"
 import { BrandLogo } from "@/components/auth/brand-logo"
 import { ForgotPasswordForm } from "@/components/auth/forgot-password-form"
@@ -12,8 +13,11 @@ export default function ForgotPasswordPage() {
         <IconButton
           aria-label="Back to login"
           className="absolute left-4 top-4"
+          asChild
         >
-          <ArrowBackIcon className="size-6" />
+          <Link href="/login">
+            <ArrowBackIcon className="size-6" />
+          </Link>
         </IconButton>
 
         <BrandLogo size="lg" />

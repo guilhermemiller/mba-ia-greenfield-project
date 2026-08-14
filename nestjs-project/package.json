@@ -28,6 +28,8 @@
     "openapi:export": "ts-node -r tsconfig-paths/register src/openapi-export.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1105.0",
+    "@aws-sdk/s3-request-presigner": "^3.1105.0",
     "@nestjs-modules/mailer": "^2.3.4",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.3",
@@ -37,9 +39,11 @@
     "@nestjs/swagger": "^11.4.2",
     "@nestjs/throttler": "^6.5.0",
     "@nestjs/typeorm": "^11.0.1",
+    "amqplib": "^0.10.9",
     "argon2": "^0.41.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.4",
+    "ffprobe-client": "^1.1.6",
     "handlebars": "^4.7.9",
     "joi": "^18.1.2",
     "pg": "^8.20.0",
@@ -53,6 +57,7 @@
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
+    "@types/amqplib": "^0.5.17",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.10.7",

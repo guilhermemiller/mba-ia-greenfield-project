@@ -55,3 +55,23 @@ export type RefreshTokenPair =
 // Shared error envelope (all auth 4xx responses)
 export type ApiErrorEnvelope =
   paths["/auth/register"]["post"]["responses"][400]["content"]["application/json"];
+
+// ─── Videos (Phase 03 — upload & processing) ─────────────────────────────────
+
+// Request bodies
+export type InitiateUploadDto =
+  paths["/videos/initiate-upload"]["post"]["requestBody"]["content"]["application/json"];
+
+export type CompleteUploadDto =
+  paths["/videos/{id}/complete"]["post"]["requestBody"]["content"]["application/json"];
+
+// Upstream success response bodies
+export type InitiateUploadResult =
+  paths["/videos/initiate-upload"]["post"]["responses"][201]["content"]["application/json"];
+
+export type Video =
+  paths["/videos/{id}"]["get"]["responses"][200]["content"]["application/json"];
+
+// Presign-part returns a bare string (the presigned PUT URL) — no alias needed.
+// Streaming/download likewise return { streamUrl } / { downloadUrl } object
+// literals the BFF reshapes for the client (kept inline in the Route Handlers).

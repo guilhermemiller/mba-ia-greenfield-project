@@ -125,8 +125,8 @@ One `lib/env.ts`. Single Zod schema, single typed `env` export. No `server-only`
 
 **Context:** Per `next-frontend/CLAUDE.md` ("Talking to the NestJS API" section), the two subprojects today run on **separate Docker Compose stacks** with no shared network:
 
-- Browser ⇒ NestJS API: `http://localhost:3000` (host-exposed port of `nestjs-api`).
-- Server-side code (RSC / Route Handlers / Server Actions, **inside the `next-frontend` container**) ⇒ NestJS API: **does not yet work** — `localhost:3000` from inside the container resolves to the container itself, not the host. CLAUDE.md notes "a shared Compose network or `host.docker.internal` will be required — to be defined".
+- Browser ⇔ NestJS API: proxy only, via the BFF (Route Handlers). The host-exposed port of `nestjs-api` is `3002` — the browser never hits it directly.
+- Server-side code (RSC / Route Handlers / Server Actions, **inside the `next-frontend` container**) ⇒ NestJS API: reached via `host.docker.internal` on the host-exposed port of `nestjs-api`. CLAUDE.md notes "a shared Compose network or `host.docker.internal` will be required — to be defined".
 
 The testing strategy in CLAUDE.md mandates a **BFF model**: every NestJS call originates from a Next.js Route Handler (`app/api/.../route.ts`), and Client Components call only same-origin Next.js routes. BFF tests stub `fetch` to NestJS via MSW. This testing architecture has implications for which keys are actually necessary.
 
@@ -146,7 +146,7 @@ One key, server-only: `API_URL`. Only Route Handlers / RSC / Server Actions read
 Two keys. Server reads `API_URL`; browser reads `NEXT_PUBLIC_API_URL`. Mirrors the convention CLAUDE.md currently calls out as "planned" (without prescribed values).
 
 - **Pros:** Matches the convention currently documented in CLAUDE.md. Permits direct browser → backend calls in addition to BFF, useful if a future feature wants to skip the BFF for latency or simplicity reasons. Explicit dual context — the dev/Docker URL ≠ the production URL is encoded in the key naming.
-- **Cons:** Adds two keys to keep in sync (Docker dev: client uses `localhost:3000`, server uses `host.docker.internal:3000` or shared-network name; production: both may converge or diverge). Browser knows backend URL → backend MUST configure CORS. Direct browser-to-backend bypasses the BFF model: tests that mock the BFF do not cover those calls; observability fragments. Violates the architectural commitment in CLAUDE.md that the BFF is the single source of truth for backend traffic.
+- **Cons:** Adds two keys to keep in sync (Docker dev: client uses `localhost:3002` for a direct host-port call, server uses `host.docker.internal:3002` or shared-network name; production: both may converge or diverge). Browser knows backend URL → backend MUST configure CORS. Direct browser-to-backend bypasses the BFF model: tests that mock the BFF do not cover those calls; observability fragments. Violates the architectural commitment in CLAUDE.md that the BFF is the single source of truth for backend traffic.
 
 ### Option C: Single shared `NEXT_PUBLIC_API_URL` (production-unified hostname)
 
@@ -157,7 +157,7 @@ One key, public, used both server and client. Works only when a reverse proxy / 
 
 **Recommendation:** **Option A (Strict BFF — single server-only `API_URL`)**. Aligned with the BFF testing strategy and architectural commitment already documented in `next-frontend/CLAUDE.md` (Route Handlers as the only NestJS caller; BFF tests stub `fetch` via MSW). Eliminates CORS, eliminates public exposure of the backend URL, and produces the smallest correct foundation. Option B's `NEXT_PUBLIC_API_URL` is a future-proofing concession with no current consumer — and adding a public key later is a non-breaking change, while removing one is breaking. Option C ties a foundational decision to infra work explicitly deferred elsewhere. The Docker networking gap (how server-in-container resolves the backend) is a separate orthogonal decision, surfaced below.
 
-> **Out-of-scope ancillary note (NOT a TD here):** Once Option A is chosen, the concrete _value_ of `API_URL` in dev (`http://host.docker.internal:3000` vs joining the two Compose stacks into a shared network with `http://nestjs-api:3000`) is a Docker-Compose-topology decision that this research does not resolve. It belongs in either Phase 02's pre-work or a dedicated infra ad-hoc TD. The env-key contract (this TD) is intentionally independent of how the value is resolved at runtime.
+> **Out-of-scope ancillary note (NOT a TD here):** Once Option A is chosen, the concrete _value_ of `API_URL` in dev (`http://host.docker.internal:3002` vs joining the two Compose stacks into a shared network with `http://nestjs-api:3000`) is a Docker-Compose-topology decision that this research does not resolve. It belongs in either Phase 02's pre-work or a dedicated infra ad-hoc TD. The env-key contract (this TD) is intentionally independent of how the value is resolved at runtime.
 
 **Decision:** **A (Strict BFF — single server-only `API_URL`)**
 

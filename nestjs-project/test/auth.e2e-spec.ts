@@ -60,7 +60,7 @@ describe('Auth (e2e)', () => {
     password = 'password123',
   ): Promise<string> {
     const authService = app.get(AuthService);
-    const mailServiceInstance = (authService as any).mailService;
+    const mailServiceInstance = authService['mailService'];
     let capturedToken = '';
     jest
       .spyOn(mailServiceInstance, 'sendConfirmationEmail')
@@ -512,7 +512,7 @@ describe('Auth (e2e)', () => {
 
   async function capturePasswordResetToken(email: string): Promise<string> {
     const authService = app.get(AuthService);
-    const mailServiceInstance = (authService as any).mailService;
+    const mailServiceInstance = authService['mailService'];
     let captured = '';
     jest
       .spyOn(mailServiceInstance, 'sendPasswordResetEmail')

@@ -147,7 +147,7 @@ _No existing files require refactor — Setup SI is the only application of this
 ```ts
 // canonical key set locked by this TD (extends the server slot of TD-02's createEnv)
 server: {
-  API_URL: z.url(),    // e.g., http://nestjs-api:3000 (shared Compose net) or http://host.docker.internal:3000 (dev)
+  API_URL: z.url(),    // e.g., http://nestjs-api:3000 (shared Compose net) or http://host.docker.internal:3002 (dev)
 },
 client: {},            // intentionally empty — NO public API URL key in this phase
 shared: {
@@ -157,7 +157,7 @@ shared: {
 
 `.env.example` documents `API_URL` + `NODE_ENV` (no `NEXT_PUBLIC_API_URL` entry; absence is intentional and load-bearing for the strict BFF model).
 
-The concrete _value_ of `API_URL` in dev (shared Compose network with `http://nestjs-api:3000` vs `http://host.docker.internal:3000`) is **out-of-scope for this TD** — that is a Docker-Compose-topology decision deferred to a future infra ad-hoc TD or Phase 02 pre-work.
+The concrete _value_ of `API_URL` in dev (shared Compose network with `http://nestjs-api:3000` vs `http://host.docker.internal:3002`) is **out-of-scope for this TD** — that is a Docker-Compose-topology decision deferred to a future infra ad-hoc TD or Phase 02 pre-work.
 
 **Aplicação:** logic-only — `API_URL` is consumed only inside `next-frontend/app/api/**/route.ts` files (BFF Route Handlers) and Server Actions / RSC that hit the backend directly. Client Components reaching the backend MUST go through a Route Handler at the same origin (the BFF model). No future phase may introduce a `NEXT_PUBLIC_API_URL` without revisiting this TD (Revision via `/decide` or Supersede via `/research`).
 

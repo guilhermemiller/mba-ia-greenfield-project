@@ -7,14 +7,26 @@ import { setSession } from "@/lib/auth/session";
 export async function POST(request: Request) {
   const body = (await request.json()) as LoginDto;
 
-  const { data, error, response } = await upstream.POST("/auth/login", {
-    body: body as never,
-  });
-  console.log(error, data, response);
-  if (error) {
-    return NextResponse.json<ApiErrorEnvelope>(error as ApiErrorEnvelope, {
-      status: response.status,
+  let data, error, response;
+  try {
+    const upstreamRes = await upstream.POST("/auth/login", {
+      body: body as never,
     });
+    data = upstreamRes.data;
+    error = upstreamRes.error;
+    response = upstreamRes.response;
+    
+    if (error) {
+      return NextResponse.json<ApiErrorEnvelope>(error as ApiErrorEnvelope, {
+        status: response.status,
+      });
+    }
+  } catch (err: any) {
+    console.error("Upstream login failed completely:", err);
+    return NextResponse.json(
+      { statusCode: 500, message: "Erro de comunicação com o servidor", error: "Internal Server Error" },
+      { status: 500 }
+    );
   }
 
   const tokens = data as LoginTokenPair;

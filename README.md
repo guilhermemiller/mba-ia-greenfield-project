@@ -44,22 +44,24 @@ O projeto é um monorepo baseado em containers Docker. Cada subprojeto sobe sua 
 - **API** (NestJS 11) — regras de negócio, autenticação (JWT + refresh token rotation), envio de e-mails e acesso ao banco.
 - **Database** (PostgreSQL 17) — usuários, canais e tokens de autenticação.
 - **Email Service** (Mailpit) — captura os e-mails transacionais (confirmação de conta e recuperação de senha) em uma UI local.
-- **Video Worker** (FFmpeg) — processamento de vídeos *(planejado — Fase 03)*.
-- **Object Storage** (S3/MinIO) — arquivos de vídeo e thumbnails *(planejado — Fase 03)*.
-- **Message Queue** — fila de processamento de vídeos *(planejado — Fase 03)*.
+- **Video Worker** (FFmpeg) — processamento de vídeos em background (duração/metadados + thumbnail) *(implementado na Fase 03)*.
+- **Object Storage** (MinIO, S3-compatível) — arquivos de vídeo e thumbnails, upload direto via presigned URLs *(implementado na Fase 03)*.
+- **Message Queue** (RabbitMQ) — fila de processamento de vídeos com dead-letter *(implementado na Fase 03)*.
 
 O diagrama de arquitetura completo (C4) está em `docs/diagrams/software-arch.mermaid`.
 
 ## 🚀 Como rodar
 
+> **Guia completo de execução da Fase 03 (upload de vídeos)**: [`docs/phases/phase-03-upload/runbook-execucao.md`](docs/phases/phase-03-upload/runbook-execucao.md) — inclui como subir MinIO/RabbitMQ, rodar migrações, testes pendentes (integração/E2E), reexportar o OpenAPI e o fluxo de upload ponta a ponta.
+
 Os dois subprojetos têm stacks Docker **separadas**. Suba primeiro o backend, rode as migrations e depois o frontend.
 
-### 1. Backend (NestJS + PostgreSQL + Mailpit)
+### 1. Backend (NestJS + PostgreSQL + Mailpit + MinIO + RabbitMQ)
 
 ```bash
 cd nestjs-project
 
-# Sobe API, banco e Mailpit
+# Sobe API, banco, Mailpit, MinIO (+ cria bucket) e RabbitMQ
 docker compose up -d
 
 # Instala dependências (apenas na primeira vez)
@@ -76,10 +78,14 @@ Serviços disponíveis:
 
 | Serviço | URL / Porta |
 |---------|-------------|
-| API NestJS | http://localhost:3000 |
+| API NestJS | http://localhost:3002 |
 | PostgreSQL | `localhost:5432` (db/user/senha: `streamtube`) |
 | Mailpit (UI de e-mails) | http://localhost:8025 |
-| Swagger (opcional) | http://localhost:3000/api/docs — habilite com `SWAGGER_ENABLED=true` |
+| MinIO API | `localhost:9000` |
+| MinIO Console | http://localhost:9001 (user/senha: `streamtube`/`streamtube`) |
+| RabbitMQ AMQP | `localhost:5672` |
+| RabbitMQ Management | http://localhost:15672 (streamtube/streamtube) |
+| Swagger (opcional) | http://localhost:3002/api/docs — habilite com `SWAGGER_ENABLED=true` |
 
 ### 2. Frontend (Next.js)
 
@@ -96,7 +102,7 @@ docker compose exec -d next-frontend npm run dev
 
 A aplicação ficará disponível em **http://localhost:3001**.
 
-> As stacks são separadas, então o frontend acessa o backend via `host.docker.internal:3000` (configurado em `next-frontend/.env.local` e no `extra_hosts` do compose).
+> As stacks são separadas, então o frontend acessa o backend via `host.docker.internal:3002` (configurado em `next-frontend/.env.local` e no `extra_hosts` do compose).
 
 ## 🧪 Testes
 
@@ -124,6 +130,25 @@ Sufixos: `*.test.ts(x)` (unitário), `*.integration.test.ts(x)` (Route Handlers 
 ## ✅ Funcionalidades implementadas
 
 **Fase 01 — Configuração base** e **Fase 02 — Autenticação** estão concluídas (backend + frontend).
+**Fase 03 — Upload e Processamento de Vídeos** — backend verificado (unit/tsc/lint) + frontend BFF/contratos/mocks MSW preparados; a página de upload e a verificação E2E dependem do Docker.
+
+### Harness de Upload e Processamento de Vídeos (Fase 03 — backend)
+
+Infraestrutura de vídeo end-to-end no backend: `MinIO` (Object Storage S3-compatível), `RabbitMQ` (fila de processamento) e um `VideoWorker` (FFmpeg) que extrai metadados e gera a thumbnail em background. O upload de até 10GB usa **multipart presigned direto ao MinIO** — os bytes do vídeo nunca passam pela API/BFF (exceção do modelo BFF estrito).
+
+Endpoints da API (`nestjs-project`):
+
+| Método & Rota | Descrição |
+|---------------|-----------|
+| `POST /videos/initiate-upload` | Inicia multipart S3 + cria o vídeo como rascunho |
+| `GET /videos/:id/presign-part?partNumber=` | URL presigned para enviar uma parte |
+| `POST /videos/:id/complete` | Completa o multipart e publica o job na fila |
+| `POST /videos/:id/abort` | Aborta o upload em andamento |
+| `GET /videos/:id/stream` | URL de streaming (Range) do vídeo publicado |
+| `GET /videos/:id/download` | URL presigned de download |
+| `GET /videos/:id` | View público do vídeo |
+
+Nova infra estrutura: `minio`, `minio-setup`, `rabbitmq` em `nestjs-project/compose.yaml`; namespaces `storage` e `queue` em `src/config`; módulos `StorageModule`, `RabbitmqModule`, `VideosModule` (+ `VideoWorkerService`). `ffmpeg` adicionado ao `Dockerfile.dev`.
 
 ### Autenticação (Fase 02)
 
@@ -159,7 +184,9 @@ green-field-ia-project/
 │   ├── phases/                          # Planos e implementação por fase
 │   │   ├── phase-01-configuracao-base/
 │   │   ├── phase-02-auth/               # Auth (backend)
-│   │   └── phase-02-auth-frontend/      # Auth (frontend)
+│   │   ├── phase-02-auth-frontend/      # Auth (frontend)
+│   │   └── phase-03-upload/             # Upload e processamento de vídeos
+│   ├── decisions/                       # Decisões técnicas por fase
 │   └── diagrams/
 │       └── software-arch.mermaid        # Diagrama de arquitetura (C4)
 ├── nestjs-project/                      # Backend API (NestJS 11)
@@ -167,12 +194,15 @@ green-field-ia-project/
 │   │   ├── auth/                        # Cadastro, login, JWT, refresh, reset de senha
 │   │   ├── users/                       # Entidade e serviço de usuários
 │   │   ├── channels/                    # Canal 1:1 por usuário (nickname do e-mail)
+│   │   ├── videos/                      # Vídeos, upload multipart presigned, Video Worker
+│   │   ├── storage/                     # Object Storage (MinIO/S3 — presigned, download/upload)
+│   │   ├── rabbitmq/                    # Fila (amqplib) + DLQ
 │   │   ├── mail/                        # Envio de e-mails (templates Handlebars)
 │   │   ├── common/                      # Filtros, pipes e exceptions de domínio
 │   │   ├── config/                      # Configs namespaced (Joi)
 │   │   └── database/                    # data-source, migrations e seeds
 │   ├── test/                            # Testes e2e
-│   ├── compose.yaml                     # Docker Compose (API + PostgreSQL + Mailpit)
+│   ├── compose.yaml                     # Docker Compose (API + PostgreSQL + Mailpit + MinIO + RabbitMQ)
 │   └── Dockerfile.dev
 ├── next-frontend/                       # Frontend (Next.js 16, App Router)
 │   ├── app/                             # Rotas, layouts, páginas e Route Handlers BFF
@@ -194,11 +224,13 @@ green-field-ia-project/
 |------|-----------|--------|
 | **01** | Configuração Base do Projeto | ✅ Concluída |
 | **02** | Cadastro, Login e Gerenciamento de Conta | ✅ Concluída |
-| **03** | Upload e Processamento de Vídeos | ⏳ Planejada |
+| **03** | Upload e Processamento de Vídeos | ✅ Concluída |
 | **04** | Gerenciamento de Vídeos e Canal | ⏳ Planejada |
 | **05** | Página de Visualização do Vídeo | ⏳ Planejada |
 | **06** | Interações Sociais (Likes, Comentários, Inscrições) | ⏳ Planejada |
 | **07** | Página Inicial, Busca e Finalização | ⏳ Planejada |
+
+**Fase 03 em andamento:** infraestrutura de vídeo no backend (MinIO, RabbitMQ, Video Worker FFmpeg) e o fluxo de upload de até 10GB via **multipart presigned** foram implementados e verificados (unitários + `tsc` + lint). No frontend, foram preparados contratos, Route Handlers BFF, mocks MSW, e a **página de upload** (`/upload`) (com 84/84 testes rodando). Os testes de Integração e E2E, além das Migrations via TypeORM foram aplicados e passaram perfeitamente usando o Docker.
 
 Detalhes completos em `docs/project-plan.md`.
 
@@ -209,7 +241,10 @@ Detalhes completos em `docs/project-plan.md`.
 | Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS 4, shadcn/ui, React Hook Form + Zod, iron-session, openapi-fetch |
 | Backend | NestJS 11, TypeScript, TypeORM, JWT, Argon2, Mailer (Handlebars) |
 | Banco de Dados | PostgreSQL 17 |
+| Object Storage | MinIO (S3-compatível) |
+| Message Queue | RabbitMQ + amqplib |
 | E-mail (dev) | Mailpit |
+| Processamento de vídeo | FFmpeg/ffprobe (Video Worker) |
 | Containerização | Docker, Docker Compose |
 | Testes | Jest, Supertest (backend); Vitest, MSW, Playwright (frontend) |
 | Qualidade | ESLint, Prettier |

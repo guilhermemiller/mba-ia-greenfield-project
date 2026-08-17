@@ -149,7 +149,7 @@ export class VideosService {
       storageKey: video.storage_key,
     });
 
-    return this.toView(video);
+    return await this.toView(video);
   }
 
   async abortUpload(userId: string, videoId: string): Promise<VideoViewDto> {
@@ -164,7 +164,7 @@ export class VideosService {
     video.status = VideoStatus.FAILED;
     video.upload_id = null;
     await this.videoRepository.save(video);
-    return this.toView(video);
+    return await this.toView(video);
   }
 
   async getVideo(videoId: string): Promise<VideoViewDto> {
@@ -174,18 +174,18 @@ export class VideosService {
     if (!video) {
       throw new VideoNotFoundException();
     }
-    return this.toView(video);
+    return await this.toView(video);
   }
 
   /** Public stream URL honoring Range; only for published/processing videos. */
-  getStreamUrl(video: Video): string | null {
+  async getStreamUrl(video: Video): Promise<string | null> {
     if (
       video.status === VideoStatus.DRAFT ||
       video.status === VideoStatus.FAILED
     ) {
       return null;
     }
-    return this.storageService.publicUrl(video.storage_key);
+    return await this.storageService.presignGetUrl(video.storage_key);
   }
 
   async getStreamUrlPublic(videoId: string): Promise<string | null> {
@@ -195,7 +195,7 @@ export class VideosService {
     if (!video) {
       throw new VideoNotFoundException();
     }
-    return this.getStreamUrl(video);
+    return await this.getStreamUrl(video);
   }
 
   async getDownloadUrl(videoId: string): Promise<string> {
@@ -240,12 +240,16 @@ export class VideosService {
     return video;
   }
 
-  private toView(video: Video): VideoViewDto {
-    return VideoViewDto.fromEntity(video, this.getThumbnailUrl(video));
+  private async toView(video: Video): Promise<VideoViewDto> {
+    return VideoViewDto.fromEntity(
+      video,
+      await this.getThumbnailUrl(video),
+      await this.getStreamUrl(video),
+    );
   }
 
-  private getThumbnailUrl(video: Video): string | null {
+  private async getThumbnailUrl(video: Video): Promise<string | null> {
     if (!video.thumbnail_key) return null;
-    return this.storageService.publicUrl(video.thumbnail_key);
+    return await this.storageService.presignGetUrl(video.thumbnail_key);
   }
 }

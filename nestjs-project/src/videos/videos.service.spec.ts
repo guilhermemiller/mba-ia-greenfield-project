@@ -48,7 +48,7 @@ function makeService(repoOverrides: Record<string, jest.Mock> = {}) {
     presignUploadPartUrl: jest.fn(),
     completeMultipartUpload: jest.fn(),
     abortMultipartUpload: jest.fn(),
-    presignGetUrl: jest.fn(),
+    presignGetUrl: jest.fn((k) => Promise.resolve(`http://minio/${k}`)),
     publicUrl: jest.fn((key) => `http://minio/${key}`),
   };
   const rabbitmqService = {
@@ -228,19 +228,19 @@ describe('VideosService', () => {
   });
 
   describe('getStreamUrl', () => {
-    it('returns null for draft/failed videos', () => {
+    it('returns null for draft/failed videos', async () => {
       const { service } = makeService();
       expect(
-        service.getStreamUrl(makeVideo({ status: VideoStatus.DRAFT })),
+        await service.getStreamUrl(makeVideo({ status: VideoStatus.DRAFT })),
       ).toBeNull();
       expect(
-        service.getStreamUrl(makeVideo({ status: VideoStatus.FAILED })),
+        await service.getStreamUrl(makeVideo({ status: VideoStatus.FAILED })),
       ).toBeNull();
     });
 
-    it('returns a public URL for published videos', () => {
+    it('returns a public URL for published videos', async () => {
       const { service } = makeService();
-      const url = service.getStreamUrl(
+      const url = await service.getStreamUrl(
         makeVideo({ status: VideoStatus.PUBLISHED }),
       );
       expect(url).toContain('videos/video-id-1/source');

@@ -17,6 +17,13 @@ const MANAGED_TABLES = [
   'videos',
 ];
 
+/** Enum types created by migrations that linger after their tables are dropped. */
+const MANAGED_TYPES = [
+  'verification_tokens_type_enum',
+  'videos_visibility_enum',
+  'videos_status_enum',
+];
+
 describe('Database migrations (integration)', () => {
   let dataSource: DataSource;
 
@@ -35,12 +42,15 @@ describe('Database migrations (integration)', () => {
 
     await dataSource.initialize();
 
-    await Promise.all([
-      ...MANAGED_TABLES.map((table) =>
-        dataSource.query(`DROP TABLE IF EXISTS "${table}" CASCADE`),
-      ),
-      dataSource.query(`DROP TABLE IF EXISTS "migrations" CASCADE`),
-    ]);
+    // Drop tables sequentially to avoid deadlocks (parallel DROPs can deadlock on catalog locks)
+    for (const table of MANAGED_TABLES) {
+      await dataSource.query(`DROP TABLE IF EXISTS "${table}" CASCADE`);
+    }
+    // Drop enum types sequentially
+    for (const type of MANAGED_TYPES) {
+      await dataSource.query(`DROP TYPE IF EXISTS "${type}" CASCADE`);
+    }
+    await dataSource.query(`DROP TABLE IF EXISTS "migrations" CASCADE`);
   });
 
   afterAll(async () => {
@@ -67,8 +77,8 @@ describe('Database migrations (integration)', () => {
       'channels',
       'refresh_tokens',
       'users',
-      'videos',
       'verification_tokens',
+      'videos',
     ]);
   });
 
